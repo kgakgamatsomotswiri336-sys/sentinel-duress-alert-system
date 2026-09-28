@@ -19,6 +19,7 @@ Two parts:
    secondary channel.
 
 ## Try the prototype
+https://kgakgamatsomotswiri336-sys.github.io/sentinel-duress-alert-system/duress-alert-demo.html
 Open `duress-alert-demo.html` in any browser. Two views:
 - **Customer tab** — enter PIN `1234` for a normal transaction, or `9999`
   for the duress code.
