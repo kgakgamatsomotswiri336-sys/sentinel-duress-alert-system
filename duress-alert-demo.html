@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sentinel — Duress Alert Demo</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#141b24;
+    --panel-2:#1b2430;
+    --line:#26313d;
+    --text:#e8edf2;
+    --muted:#8a97a6;
+    --amber:#e8a33d;
+    --red:#d9534f;
+    --green:#4caf7d;
+    --focus:#5b9dd9;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing:border-box;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f3f5f7; --panel:#ffffff; --panel-2:#eef1f4; --line:#dde2e7; --text:#141a20; --muted:#5b6672;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    display:flex; flex-direction:column; min-height:100%;
+  }
+  header{
+    padding:16px env(safe-area-inset-right,0px) 14px 18px;
+    padding-top:calc(16px + env(safe-area-inset-top,0px));
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand-mark{
+    width:28px;height:28px;border-radius:7px;
+    background:linear-gradient(135deg,var(--amber),var(--red));
+    display:flex;align-items:center;justify-content:center;font-size:15px;
+  }
+  .brand-name{font-weight:650; font-size:15px; letter-spacing:.2px;}
+  .brand-sub{font-size:11px; color:var(--muted); margin-top:1px;}
+  .tabs{display:flex; gap:4px; background:var(--panel-2); padding:3px; border-radius:9px; border:1px solid var(--line);}
+  .tab{
+    border:none; background:transparent; color:var(--muted); font-size:12.5px; font-weight:600;
+    padding:7px 12px; border-radius:7px; cursor:pointer;
+  }
+  .tab.active{background:var(--panel); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.15);}
+  main{flex:1; max-width:720px; width:100%; margin:0 auto; padding:22px 18px 40px;}
+  .hidden{display:none !important;}
+
+  /* --- customer view --- */
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px;
+  }
+  .balance-label{font-size:12px; color:var(--muted);}
+  .balance{font-size:32px; font-weight:650; margin:4px 0 18px; letter-spacing:-0.5px;}
+  .keypad{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:16px 0;}
+  .key{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    font-size:19px; font-weight:600; padding:16px 0; border-radius:10px; cursor:pointer;
+  }
+  .key:active{background:var(--line);}
+  .key:focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+  .pin-dots{display:flex; gap:10px; justify-content:center; margin:6px 0 4px;}
+  .dot{width:11px;height:11px;border-radius:50%;border:1.5px solid var(--muted);}
+  .dot.filled{background:var(--text); border-color:var(--text);}
+  .hint{font-size:12px; color:var(--muted); text-align:center; margin-top:14px; line-height:1.5;}
+  .primary-btn{
+    width:100%; background:var(--focus); color:#fff; border:none; padding:13px; border-radius:10px;
+    font-size:14.5px; font-weight:650; cursor:pointer; margin-top:6px;
+  }
+  .primary-btn:focus-visible{outline:2px solid var(--text); outline-offset:2px;}
+  .secondary-note{
+    margin-top:22px; padding-top:18px; border-top:1px dashed var(--line);
+  }
+  .app-alert-btn{
+    width:100%; background:transparent; border:1.5px solid var(--red); color:var(--red);
+    padding:12px; border-radius:10px; font-size:13.5px; font-weight:650; cursor:pointer;
+  }
+  .app-alert-btn:focus-visible{outline:2px solid var(--red); outline-offset:2px;}
+  .app-alert-btn small{display:block; font-weight:400; color:var(--muted); margin-top:3px; font-size:11.5px;}
+
+  .toast{
+    position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%);
+    background:var(--panel); border:1px solid var(--line); color:var(--text);
+    padding:12px 18px; border-radius:10px; font-size:13.5px; box-shadow:0 6px 20px rgba(0,0,0,.3);
+    opacity:0; pointer-events:none; transition:opacity .25s ease, bottom .25s ease; max-width:88vw; text-align:center;
+  }
+  .toast.show{opacity:1; bottom:calc(40px + env(safe-area-inset-bottom,0px));}
+
+  /* --- dashboard view --- */
+  .dash-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px;}
+  .dash-title{font-size:15px; font-weight:650;}
+  .dash-count{font-size:12px; color:var(--muted);}
+  .empty{
+    text-align:center; color:var(--muted); font-size:13px; padding:60px 20px;
+    border:1px dashed var(--line); border-radius:14px;
+  }
+  .alert-card{
+    background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--red);
+    border-radius:12px; padding:14px 16px; margin-bottom:12px; animation:slidein .3s ease;
+  }
+  @keyframes slidein{from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:translateY(0);}}
+  .alert-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .alert-type{font-size:13.5px; font-weight:650; color:var(--red);}
+  .alert-time{font-size:11px; color:var(--muted); white-space:nowrap;}
+  .alert-body{font-size:12.5px; color:var(--muted); margin-top:6px; line-height:1.5;}
+  .alert-meta{display:flex; gap:14px; margin-top:10px; font-size:11.5px; color:var(--muted);}
+  .status-pill{
+    display:inline-block; font-size:10.5px; font-weight:650; padding:3px 8px; border-radius:20px;
+    background:rgba(76,175,125,.15); color:var(--green); margin-top:10px;
+  }
+  .status-pill.pending{background:rgba(232,163,61,.15); color:var(--amber);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">🛡️</div>
+    <div>
+      <div class="brand-name">Sentinel</div>
+      <div class="brand-sub">Duress alert prototype</div>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" id="tab-customer">Customer</button>
+    <button class="tab" id="tab-bank">Bank ops</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- CUSTOMER VIEW -->
+  <section id="view-customer">
+    <div class="card">
+      <div class="balance-label">Available balance</div>
+      <div class="balance" id="balance">R 4,280.00</div>
+
+      <div class="pin-dots" id="pinDots"></div>
+      <div class="keypad" id="keypad"></div>
+      <button class="primary-btn" id="confirmBtn">Confirm withdrawal — R500</button>
+
+      <p class="hint">
+        Demo tip: PIN <strong>1234</strong> processes normally.<br>
+        PIN <strong>9999</strong> is the duress code — it looks identical to the attacker but silently notifies the bank.
+      </p>
+
+      <div class="secondary-note">
+        <button class="app-alert-btn" id="panicBtn">
+          I'm not safe right now
+          <small>Sends a direct alert from this app — use when it's safe to do so openly.</small>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- BANK VIEW -->
+  <section id="view-bank" class="hidden">
+    <div class="dash-head">
+      <div class="dash-title">Security operations feed</div>
+      <div class="dash-count" id="dashCount">0 active alerts</div>
+    </div>
+    <div id="alertList"></div>
+    <div class="empty" id="emptyState">No alerts yet. Trigger one from the Customer tab to see it land here.</div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ---- tab switching ----
+  const tabCustomer = document.getElementById('tab-customer');
+  const tabBank = document.getElementById('tab-bank');
+  const viewCustomer = document.getElementById('view-customer');
+  const viewBank = document.getElementById('view-bank');
+
+  tabCustomer.onclick = () => switchTab('customer');
+  tabBank.onclick = () => switchTab('bank');
+  function switchTab(name){
+    const isC = name === 'customer';
+    tabCustomer.classList.toggle('active', isC);
+    tabBank.classList.toggle('active', !isC);
+    viewCustomer.classList.toggle('hidden', !isC);
+    viewBank.classList.toggle('hidden', isC);
+  }
+
+  // ---- keypad ----
+  const keypad = document.getElementById('keypad');
+  const pinDotsEl = document.getElementById('pinDots');
+  let pin = '';
+  const keys = ['1','2','3','4','5','6','7','8','9','⌫','0','OK'];
+  keys.forEach(k=>{
+    const b = document.createElement('button');
+    b.className='key'; b.textContent=k; b.type='button';
+    b.onclick=()=>handleKey(k);
+    keypad.appendChild(b);
+  });
+  function renderDots(){
+    pinDotsEl.innerHTML='';
+    for(let i=0;i<4;i++){
+      const d=document.createElement('div');
+      d.className='dot'+(i<pin.length?' filled':'');
+      pinDotsEl.appendChild(d);
+    }
+  }
+  function handleKey(k){
+    if(k==='⌫'){ pin = pin.slice(0,-1); renderDots(); return; }
+    if(k==='OK'){ submitPin(); return; }
+    if(pin.length<4){ pin += k; renderDots(); }
+    if(pin.length===4){ setTimeout(submitPin, 150); }
+  }
+  renderDots();
+
+  document.getElementById('confirmBtn').onclick = submitPin;
+
+  function submitPin(){
+    if(pin.length<4){ showToast('Enter your 4-digit PIN first'); return; }
+    if(pin==='9999'){
+      logAlert('Duress PIN entered', 'A withdrawal PIN matching the duress code was used at Terminal ATM-0417. Transaction is being allowed to proceed normally so the customer is not put at further risk.', 'ATM-0417 · Sandton City');
+      showToast('Transaction approved');
+    } else if(pin==='1234'){
+      showToast('Transaction approved');
+    } else {
+      showToast('Incorrect PIN — try 1234 or 9999');
+    }
+    pin=''; renderDots();
+  }
+
+  document.getElementById('panicBtn').onclick = ()=>{
+    logAlert('In-app distress signal', 'Customer manually triggered a distress alert from the mobile app. No transaction is in progress — this may indicate coercion, stalking, or another active threat.', 'Mobile app · GPS: -26.1076, 28.0567');
+    showToast('Help is on the way — stay safe');
+  };
+
+  // ---- toast ----
+  const toastEl = document.getElementById('toast');
+  let toastTimer;
+  function showToast(msg){
+    clearTimeout(toastTimer);
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    toastTimer = setTimeout(()=>toastEl.classList.remove('show'), 2200);
+  }
+
+  // ---- bank dashboard ----
+  const alertList = document.getElementById('alertList');
+  const emptyState = document.getElementById('emptyState');
+  const dashCount = document.getElementById('dashCount');
+  let alerts = [];
+
+  function logAlert(type, body, meta){
+    const alert = { type, body, meta, time: new Date(), status:'pending' };
+    alerts.unshift(alert);
+    renderAlerts();
+    switchTab('bank');
+    setTimeout(()=>{ alert.status='dispatched'; renderAlerts(); }, 1600);
+  }
+
+  function renderAlerts(){
+    emptyState.classList.toggle('hidden', alerts.length>0);
+    dashCount.textContent = alerts.length + (alerts.length===1?' active alert':' active alerts');
+    alertList.innerHTML='';
+    alerts.forEach(a=>{
+      const el = document.createElement('div');
+      el.className='alert-card';
+      const timeStr = a.time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      el.innerHTML = `
+        <div class="alert-top">
+          <div class="alert-type">⚠ ${a.type}</div>
+          <div class="alert-time">${timeStr}</div>
+        </div>
+        <div class="alert-body">${a.body}</div>
+        <div class="alert-meta"><span>${a.meta}</span></div>
+        <div class="status-pill ${a.status==='pending'?'pending':''}">${a.status==='pending'?'Dispatching to response team…':'Response team notified'}</div>
+      `;
+      alertList.appendChild(el);
+    });
+  }
+  renderAlerts();
+</script>
+
+</body>
+</html>
